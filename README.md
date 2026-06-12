@@ -139,7 +139,7 @@ cliniqbot/
 ### STEP 0 — Clone the repository
 
 ```bash
-git clone https://github.com/AnjaliYadav-04/cliniqbot
+git clone https://github.com/AnjaliYadav-04/CliniqBot-Clinical-Intelligence-Chatbot
 cd cliniqbot
 ```
 
@@ -276,7 +276,7 @@ Grant the following policies:
 Save the URI after creation, e.g.:
 
 ```
-315865595366.dkr.ecr.us-east-1.amazonaws.com/cliniqbot
+315865595366.dkr.ecr.us-east-1.amazonaws.com/CliniqBot-Clinical-Intelligence-Chatbot
 ```
 
 ### 4. Launch an EC2 instance (Ubuntu)
