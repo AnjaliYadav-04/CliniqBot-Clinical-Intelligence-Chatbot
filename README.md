@@ -51,57 +51,26 @@ At runtime, the Flask web server receives a user query. LangChain's retrieval ch
 
 ## Workflow Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PHASE 1 — OFFLINE INDEXING                   │
-│                      (run store_index.py once)                  │
-│                                                                  │
-│   data/*.pdf                                                     │
-│       │                                                          │
-│       ▼                                                          │
-│   DirectoryLoader + PyPDFLoader                                 │
-│       │  Load all PDF pages as LangChain Document objects       │
-│       ▼                                                          │
-│   filter_to_minimal_docs()                                       │
-│       │  Retain page_content + source metadata only            │
-│       ▼                                                          │
-│   RecursiveCharacterTextSplitter                                 │
-│       │  chunk_size=500, chunk_overlap=20                       │
-│       ▼                                                          │
-│   HuggingFaceEmbeddings                                          │
-│       │  sentence-transformers/all-MiniLM-L6-v2 (384-dim)      │
-│       ▼                                                          │
-│   PineconeVectorStore.from_documents()                           │
-│       │  Upserts all chunk vectors → "medical-chatbot" index    │
-│       ▼                                                          │
-│   Pinecone Serverless Index (AWS us-east-1, cosine metric)      │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph P1["⬛ PHASE 1 — OFFLINE INDEXING (store_index.py)"]
+        A[📄 data/*.pdf\nMedical PDFs] --> B[DirectoryLoader + PyPDFLoader\nLoads pages as Document objects]
+        B --> C[filter_to_minimal_docs\nKeeps page_content + source only]
+        C --> D[RecursiveCharacterTextSplitter\nchunk_size=500  overlap=20]
+        D --> E[HuggingFaceEmbeddings\nall-MiniLM-L6-v2 · 384 dims · local]
+        E --> F[(Pinecone Serverless Index\nmedical-chatbot · cosine · us-east-1)]
+    end
 
-┌─────────────────────────────────────────────────────────────────┐
-│                    PHASE 2 — ONLINE INFERENCE                   │
-│                        (Flask web server)                        │
-│                                                                  │
-│   User types query in chat.html                                  │
-│       │  jQuery AJAX POST → /get                                │
-│       ▼                                                          │
-│   Flask /get route receives msg                                  │
-│       │                                                          │
-│       ▼                                                          │
-│   PineconeVectorStore.as_retriever()                             │
-│       │  search_type="similarity", k=3                          │
-│       │  Fetches top-3 matching document chunks                 │
-│       ▼                                                          │
-│   ChatPromptTemplate                                             │
-│       │  System prompt: "You are a Medical assistant…"          │
-│       │  Injects retrieved {context} + user {input}             │
-│       ▼                                                          │
-│   ChatOpenAI (gpt-4o)                                            │
-│       │  Generates concise grounded answer (≤3 sentences)       │
-│       ▼                                                          │
-│   Response returned to chat.html → displayed as bot message     │
-└─────────────────────────────────────────────────────────────────┘
-```
+    subgraph P2["⬛ PHASE 2 — ONLINE INFERENCE (app.py)"]
+        G[👤 User types a question\nchat.html · jQuery AJAX POST /get] --> H[Flask /get route\nReceives msg · invokes RAG chain]
+        H --> I[PineconeVectorStore retriever\nCosine similarity · returns top-3 chunks]
+        I --> J[ChatPromptTemplate\nInjects context + input into system prompt]
+        J --> K[ChatOpenAI — gpt-4o\nGrounded answer · max 3 sentences]
+        K --> L[✅ Answer in chat window\nRendered in chat.html]
+    end
 
+    F -.->|index ready| I
+```
 ---
 
 ## Key Features
